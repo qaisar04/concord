@@ -1,5 +1,6 @@
 package kz.concord.concord_mongo_autoconfigure.config.props;
 
+import kz.concord.concord_mongo_autoconfigure.monitoring.MongoLogLevel;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -20,5 +21,6 @@ public class ConcordMongoProperties {
     @Data
     public static class Monitoring {
         private boolean enabled = false;
+        private MongoLogLevel logLevel = MongoLogLevel.DEBUG;
     }
 }

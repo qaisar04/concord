@@ -1,1 +1,2 @@
 kz.concord.concord_mongo_autoconfigure.config.ConcordMongoAutoConfiguration
+kz.concord.concord_mongo_autoconfigure.config.MongoMonitoringConfiguration
