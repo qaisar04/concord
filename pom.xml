@@ -17,6 +17,7 @@
 
     <modules>
         <module>concord-elastic-service</module>
+        <module>concord-mongo-autoconfigure</module>
     </modules>
 
     <properties>
