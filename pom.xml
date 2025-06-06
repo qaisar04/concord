@@ -18,6 +18,7 @@
     <modules>
         <module>concord-elastic-service</module>
         <module>concord-mongo-autoconfigure</module>
+        <module>concord-kafka-producer</module>
     </modules>
 
     <properties>
