@@ -80,8 +80,6 @@ public class MetricsProducerInterceptor implements ProducerInterceptor<String, O
 
     @Override
     public void configure(Map<String, ?> configs) {
-        // MeterRegistry should be set externally
         log.debug("MetricsProducerInterceptor configured");
     }
-
 }

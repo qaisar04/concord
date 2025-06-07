@@ -32,16 +32,10 @@ public class ConcordKafkaProperties {
     private Retry retry = new Retry();
 
     @Valid
-    private Partitioning partitioning = new Partitioning();
-
-    @Valid
     private Metrics metrics = new Metrics();
 
     @Valid
-    private Tracing tracing = new Tracing();
-
-
-    private Map<String, Object> additionalProperties = new HashMap<>();
+    private SchemaRegistry schemaRegistry = new SchemaRegistry();
 
     @Data
     public static class Security {
@@ -83,13 +77,6 @@ public class ConcordKafkaProperties {
     }
 
     @Data
-    public static class Partitioning {
-        private String strategy = "default";
-        private String partitionerClass;
-        private Map<String, Object> properties = new HashMap<>();
-    }
-
-    @Data
     public static class Metrics {
         private boolean enabled = true;
         private String prefix = "concord.kafka.producer";
@@ -98,10 +85,8 @@ public class ConcordKafkaProperties {
     }
 
     @Data
-    public static class Tracing {
-        private boolean enabled = true;
-        private String serviceName = "kafka-producer";
-        private double samplingProbability = 1.0;
+    public static class SchemaRegistry {
+        private boolean enabled = false;
+        private String url = "http://localhost:8081";
     }
-
 }

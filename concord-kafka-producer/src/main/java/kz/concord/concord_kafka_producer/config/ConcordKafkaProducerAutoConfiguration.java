@@ -1,15 +1,8 @@
 package kz.concord.concord_kafka_producer.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import kz.concord.concord_kafka_producer.batch.BatchEventPublisher;
-import kz.concord.concord_kafka_producer.event.EventPublisher;
+import io.confluent.kafka.serializers.KafkaAvroSerializer;
 import kz.concord.concord_kafka_producer.interceptor.MetricsProducerInterceptor;
-import kz.concord.concord_kafka_producer.interceptor.TracingProducerInterceptor;
-import kz.concord.concord_kafka_producer.metrics.KafkaProducerMetrics;
 import kz.concord.concord_kafka_producer.props.ConcordKafkaProperties;
-import kz.concord.concord_kafka_producer.serialization.SerializerRegistry;
-import kz.concord.concord_kafka_producer.service.ConcordEventPublisher;
-import kz.concord.concord_kafka_producer.service.EventEnvelopeFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -19,7 +12,6 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -28,7 +20,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
-import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,67 +32,24 @@ import java.util.Map;
 @ConditionalOnProperty(prefix = "concord.kafka.producer", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(ConcordKafkaProperties.class)
 @RequiredArgsConstructor
-@Import({KafkaProducerMetricsConfiguration.class, KafkaProducerTracingConfiguration.class})
+@Import({KafkaProducerMetricsConfiguration.class})
 public class ConcordKafkaProducerAutoConfiguration {
 
     private final ConcordKafkaProperties properties;
 
     @Bean
-    @ConditionalOnMissingBean
-    public ProducerFactory<String, Object> concordKafkaProducerFactory(ObjectMapper objectMapper) {
+    public ProducerFactory<String, Object> concordKafkaProducerFactory() {
         Map<String, Object> configProps = createProducerConfig();
-        
         DefaultKafkaProducerFactory<String, Object> factory = new DefaultKafkaProducerFactory<>(configProps);
-        
-        JsonSerializer<Object> jsonSerializer = new JsonSerializer<>(objectMapper);
-        jsonSerializer.setAddTypeInfo(properties.getSerialization().isAddTypeHeaders());
-        factory.setValueSerializer(jsonSerializer);
-        
-        log.info("Configured Kafka producer factory with bootstrap servers: {}", 
-            properties.getBootstrapServers());
-            
+
+        log.info("Configured Kafka producer factory with bootstrap servers: {}", properties.getBootstrapServers());
+
         return factory;
     }
 
     @Bean
-    @ConditionalOnMissingBean
     public KafkaTemplate<String, Object> concordKafkaTemplate(ProducerFactory<String, Object> producerFactory) {
-        KafkaTemplate<String, Object> template = new KafkaTemplate<>(producerFactory);
-        
-        template.setObservationEnabled(properties.getTracing().isEnabled());
-        
-        log.info("Configured Kafka template with tracing enabled: {}", properties.getTracing().isEnabled());
-        
-        return template;
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public EventEnvelopeFactory eventEnvelopeFactory() {
-        return new EventEnvelopeFactory();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public SerializerRegistry serializerRegistry() {
-        return new SerializerRegistry(List.of());
-    }
-
-    @Bean
-    @ConditionalOnMissingBean
-    public BatchEventPublisher batchEventPublisher(EventPublisher eventPublisher, KafkaProducerMetrics metrics) {
-        return new BatchEventPublisher(eventPublisher, metrics);
-    }
-
-
-
-    @Bean
-    @ConditionalOnMissingBean
-    public EventPublisher concordEventPublisher(
-            KafkaTemplate<String, Object> kafkaTemplate,
-            KafkaProducerMetrics metrics,
-            EventEnvelopeFactory envelopeFactory) {
-        return new ConcordEventPublisher(kafkaTemplate, metrics, envelopeFactory);
+        return new KafkaTemplate<>(producerFactory);
     }
 
     private Map<String, Object> createProducerConfig() {
@@ -109,7 +57,7 @@ public class ConcordKafkaProducerAutoConfiguration {
         
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, properties.getBootstrapServers());
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class);
         
         configProps.put(ProducerConfig.RETRIES_CONFIG, properties.getRetry().getAttempts());
         configProps.put(ProducerConfig.RETRY_BACKOFF_MS_CONFIG, properties.getRetry().getBackoff().toMillis());
@@ -127,23 +75,18 @@ public class ConcordKafkaProducerAutoConfiguration {
             configureSecurity(configProps);
         }
         
-        if (properties.getPartitioning().getPartitionerClass() != null) {
-            configProps.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, properties.getPartitioning().getPartitionerClass());
-        }
-        
-        // Add producer interceptors
         List<String> interceptors = new ArrayList<>();
-        if (properties.getTracing().isEnabled()) {
-            interceptors.add(TracingProducerInterceptor.class.getName());
-        }
+
         if (properties.getMetrics().isEnabled()) {
             interceptors.add(MetricsProducerInterceptor.class.getName());
         }
         if (!interceptors.isEmpty()) {
             configProps.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG, interceptors);
         }
-        
-        configProps.putAll(properties.getAdditionalProperties());
+
+        if (properties.getSchemaRegistry().isEnabled()) {
+            configProps.put("schema.registry.url", properties.getSchemaRegistry().getUrl());
+        }
         
         return configProps;
     }

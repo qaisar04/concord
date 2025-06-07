@@ -4,7 +4,6 @@ concord:
       enabled: true
       bootstrap-servers: localhost:9092
       
-      # Security configuration
       security:
         protocol: PLAINTEXT  # PLAINTEXT, SASL_SSL, SSL, SASL_PLAINTEXT
         mechanism: PLAIN     # PLAIN, SCRAM-SHA-256, SCRAM-SHA-512
@@ -15,7 +14,6 @@ concord:
         keystore: ${KAFKA_KEYSTORE:}
         keystore-password: ${KAFKA_KEYSTORE_PASSWORD:}
       
-      # Serialization settings
       serialization:
         key-serializer: org.apache.kafka.common.serialization.StringSerializer
         value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -23,7 +21,6 @@ concord:
         properties:
           spring.json.add.type.headers: true
       
-      # Retry and reliability configuration
       retry:
         attempts: 3
         backoff: 1000ms
@@ -32,14 +29,6 @@ concord:
         enable-idempotence: true
         max-in-flight-requests-per-connection: 5
       
-      # Partitioning strategy
-      partitioning:
-        strategy: default
-        # partitioner-class: com.example.CustomPartitioner
-        properties:
-          # Custom partitioner properties
-      
-      # Metrics and monitoring
       metrics:
         enabled: true
         prefix: concord.kafka.producer
@@ -48,22 +37,7 @@ concord:
           application: ${spring.application.name:my-service}
           environment: ${spring.profiles.active:development}
           version: ${spring.application.version:unknown}
-      
-      # Distributed tracing
-      tracing:
-        enabled: true
-        service-name: ${spring.application.name:kafka-producer}
-        sampling-probability: 1.0
 
-      # Additional Kafka producer properties
-      additional-properties:
-        compression.type: snappy
-        batch.size: 16384
-        linger.ms: 5
-        buffer.memory: 33554432
-        max.request.size: 1048576
-
-# Spring Boot Actuator configuration (optional)
 management:
   endpoints:
     web:
